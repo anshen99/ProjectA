@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custodian — release gate ledger</title>
+<meta name="description" content="Chain of custody for a release candidate: six pipeline gates, who signed each one, and what is blocking the deploy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#e9ecf1;
+    --raised:#f5f7fa;
+    --ink:#0e1b2c;
+    --slate:#43526a;
+    --rule:#c6cdd8;
+    --rule-soft:#d8dee6;
+    --seal:#a82f1e;
+    --seal-soft:#f0dcd7;
+    --pass:#1e6b57;
+    --warn:#966c14;
+    --idle:#98a4b5;
+    --focus:#1d5fb0;
+    --shadow:rgba(14,27,44,.13);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0d131b;
+      --raised:#151e29;
+      --ink:#e6ebf2;
+      --slate:#95a4b8;
+      --rule:#26313f;
+      --rule-soft:#1d2732;
+      --seal:#e4664f;
+      --seal-soft:#2e1a17;
+      --pass:#4fbf9c;
+      --warn:#dcaa48;
+      --idle:#4b5a6d;
+      --focus:#7fb0f0;
+      --shadow:rgba(0,0,0,.45);
+    }
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px;
+    line-height:1.5;
+    font-variant-numeric:tabular-nums;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:2px}
+
+  .wrap{max-width:1020px;margin:0 auto;padding:0 28px}
+
+  /* ---------- masthead ---------- */
+  .masthead{border-bottom:1px solid var(--rule);background:var(--paper)}
+  .masthead .wrap{
+    display:flex;align-items:baseline;justify-content:space-between;
+    gap:20px;padding-top:18px;padding-bottom:14px;flex-wrap:wrap;
+  }
+  .mark{font-weight:700;font-size:19px;letter-spacing:-.02em}
+  .mark span{color:var(--slate);font-weight:500}
+  .buildref{font-size:13px;color:var(--slate);display:flex;gap:18px;flex-wrap:wrap}
+  .buildref b{font-weight:500;color:var(--ink)}
+
+  /* ---------- verdict ---------- */
+  .verdict{padding:56px 0 8px}
+  .verdict .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:40px;align-items:start}
+  .verdict h1{
+    margin:0;font-size:clamp(40px,7.2vw,76px);line-height:.94;
+    font-weight:700;letter-spacing:-.035em;max-width:12ch;
+  }
+  .verdict h1 em{font-style:normal;display:block;color:var(--seal)}
+  .subject{margin:22px 0 0;max-width:62ch;color:var(--slate);font-size:17px}
+  .artifact{margin:26px 0 0;border-top:1px solid var(--rule);padding-top:14px;max-width:60ch}
+  .artifact dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 22px;font-size:13.5px}
+  .artifact dt{color:var(--slate)}
+  .artifact dd{margin:0;overflow-wrap:anywhere}
+
+  .actions{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap}
+  .btn{
+    font:inherit;font-size:14.5px;font-weight:500;cursor:pointer;
+    padding:10px 18px;border-radius:3px;border:1px solid var(--ink);
+    background:var(--ink);color:var(--paper);
+  }
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+  .btn:hover{opacity:.86}
+
+  /* ---------- stamp (the one bold moment) ---------- */
+  .stamp{
+    width:190px;height:190px;flex:none;position:relative;
+    display:grid;place-content:center;text-align:center;
+    color:var(--seal);border:3px solid var(--seal);border-radius:50%;
+    transform:rotate(-8deg);
+  }
+  .stamp::after{
+    content:"";position:absolute;inset:9px;border:1.5px solid var(--seal);border-radius:50%;opacity:.7;
+  }
+  .stamp .word{font-size:34px;font-weight:700;letter-spacing:.02em;line-height:1}
+  .stamp .sub{font-size:12.5px;margin-top:7px;letter-spacing:.06em;color:var(--seal);opacity:.9}
+  .stamp .date{font-size:11px;margin-top:12px;opacity:.75}
+  @media (prefers-reduced-motion:no-preference){
+    .stamp{animation:land .58s cubic-bezier(.2,1.4,.4,1) both}
+  }
+  @keyframes land{
+    from{opacity:0;transform:rotate(-22deg) scale(1.9)}
+    to{opacity:1;transform:rotate(-8deg) scale(1)}
+  }
+
+  /* ---------- chain ---------- */
+  .chain{margin:52px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(6,1fr)}
+  .chain li{position:relative;text-align:center}
+  .chain li::before{
+    content:"";position:absolute;top:8px;right:50%;width:100%;height:2px;background:var(--rule);
+  }
+  .chain li:first-child::before{display:none}
+  .node{
+    -webkit-appearance:none;appearance:none;background:none;border:0;font:inherit;
+    padding:0 4px 6px;cursor:pointer;width:100%;color:var(--slate);
+  }
+  .dot{
+    display:block;width:18px;height:18px;margin:0 auto 10px;border-radius:50%;
+    background:var(--paper);border:2px solid var(--idle);position:relative;z-index:1;
+  }
+  .node .lbl{font-size:12.5px;font-weight:500;display:block}
+  .node[data-state="pass"] .dot{background:var(--pass);border-color:var(--pass)}
+  .node[data-state="warn"] .dot{background:var(--warn);border-color:var(--warn)}
+  .node[data-state="fail"] .dot{background:var(--seal);border-color:var(--seal);box-shadow:0 0 0 5px var(--seal-soft)}
+  .node[data-state="fail"] .lbl{color:var(--seal);font-weight:600}
+  .node:hover .lbl{color:var(--ink)}
+
+  /* ---------- sections ---------- */
+  section{padding:64px 0}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+    border-bottom:1px solid var(--ink);padding-bottom:10px;margin-bottom:0;flex-wrap:wrap}
+  .sec-head h2{margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em}
+  .sec-head p{margin:0;color:var(--slate);font-size:13.5px}
+
+  /* ---------- ledger ---------- */
+  .ledger{list-style:none;margin:0;padding:0}
+  .ledger li{
+    display:grid;grid-template-columns:34px minmax(0,1fr) 190px 74px 104px;
+    gap:18px;align-items:start;padding:18px 8px;border-bottom:1px solid var(--rule-soft);
+    transition:background .25s ease;
+  }
+  .ledger li.is-cued{background:var(--raised)}
+  .num{color:var(--slate);font-size:13px;padding-top:2px}
+  .gate-name{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+  .gate-what{margin:4px 0 0;color:var(--slate);font-size:13.5px;max-width:52ch}
+  .signer,.elapsed{font-size:13px;color:var(--slate);padding-top:3px;overflow-wrap:anywhere}
+  .result{font-size:13.5px;font-weight:600;padding-top:2px}
+  .result[data-state="pass"]{color:var(--pass)}
+  .result[data-state="warn"]{color:var(--warn)}
+  .result[data-state="fail"]{color:var(--seal)}
+  .result[data-state="idle"]{color:var(--idle);font-weight:500}
+
+  /* ---------- findings ---------- */
+  .findings{list-style:none;margin:0;padding:0}
+  .findings li{border-left:3px solid var(--rule);padding:20px 0 20px 20px;margin-top:26px}
+  .findings li[data-sev="critical"]{border-left-color:var(--seal)}
+  .findings li[data-sev="high"]{border-left-color:var(--warn)}
+  .sev{font-size:12.5px;font-weight:600;color:var(--slate)}
+  .findings li[data-sev="critical"] .sev{color:var(--seal)}
+  .findings li[data-sev="high"] .sev{color:var(--warn)}
+  .findings h3{margin:5px 0 0;font-size:18px;font-weight:600;letter-spacing:-.015em;max-width:46ch}
+  .findings p{margin:8px 0 0;color:var(--slate);font-size:14.5px;max-width:64ch}
+  .where{margin-top:10px;font-size:13px;color:var(--slate);overflow-wrap:anywhere}
+  .fix{margin-top:8px;font-size:14px}
+  .fix b{font-weight:600}
+
+  /* ---------- policy ---------- */
+  .policy-note{color:var(--slate);font-size:14.5px;max-width:64ch;margin:24px 0 18px}
+  pre{
+    margin:0;background:var(--raised);border:1px solid var(--rule-soft);border-left:3px solid var(--seal);
+    padding:20px 22px;overflow-x:auto;font-size:13.5px;line-height:1.65;
+  }
+  pre .c{color:var(--slate)}
+  pre .k{color:var(--seal)}
+  .srcline{margin:10px 0 0;font-size:12.5px;color:var(--slate)}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--rule);padding:26px 0 44px;color:var(--slate);font-size:13px}
+  footer .wrap{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
+
+  /* ---------- narrow ---------- */
+  @media (max-width:860px){
+    .verdict .wrap{grid-template-columns:1fr;gap:34px}
+    .stamp{width:158px;height:158px;justify-self:start}
+    .stamp .word{font-size:29px}
+    .ledger li{grid-template-columns:28px minmax(0,1fr) auto;gap:12px}
+    .signer,.elapsed{grid-column:2;padding-top:0;margin-top:6px}
+    .elapsed{grid-column:3;text-align:right}
+    .result{grid-column:3;text-align:right}
+  }
+  @media (max-width:560px){
+    .wrap{padding:0 20px}
+    section{padding:48px 0}
+    .node .lbl{font-size:11px}
+    .chain{gap:0}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="mark">Custodian <span>/ checkout-api</span></div>
+    <div class="buildref">
+      <span>build <b>4821</b></span>
+      <span>branch <b class="mono">release/2.14</b></span>
+      <span>evaluated <b>09:41 UTC</b></span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="verdict">
+    <div class="wrap">
+      <div>
+        <h1>Release candidate <em>held at gate 4</em></h1>
+        <p class="subject">Four of six gates cleared. Artifact signing rejected the build: the base layer carries no provenance attestation, so nothing downstream will run until it is replaced or the policy is waived.</p>
+
+        <div class="artifact">
+          <dl>
+            <dt>Image</dt><dd class="mono">ghcr.io/northwind/checkout-api:2.14.0-rc3</dd>
+            <dt>Digest</dt><dd class="mono">sha256:9f2c4b7e0d51a83c6ee2f04b7d19c8aa5b3e77f10c92d4416b8ac03e5721a41d</dd>
+            <dt>Commit</dt><dd class="mono">8e31c0d</dd>
+          </dl>
+        </div>
+
+        <div class="actions">
+          <button class="btn" data-goto="findings">See what is blocking</button>
+          <button class="btn ghost" data-goto="policy">Read the policy</button>
+        </div>
+      </div>
+
+      <div class="stamp" role="img" aria-label="Stamped: deploy denied, 2 of 6 gates unrun">
+        <div class="word">DENIED</div>
+        <div class="sub">gate 4 of 6</div>
+        <div class="date mono">2026-09-07</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <ol class="chain">
+      <li><button class="node" data-state="pass" data-gate="1"><span class="dot"></span><span class="lbl">Source</span></button></li>
+      <li><button class="node" data-state="warn" data-gate="2"><span class="dot"></span><span class="lbl">Deps</span></button></li>
+      <li><button class="node" data-state="pass" data-gate="3"><span class="dot"></span><span class="lbl">SAST</span></button></li>
+      <li><button class="node" data-state="fail" data-gate="4"><span class="dot"></span><span class="lbl">Sign</span></button></li>
+      <li><button class="node" data-state="idle" data-gate="5"><span class="dot"></span><span class="lbl">Scan</span></button></li>
+      <li><button class="node" data-state="idle" data-gate="6"><span class="dot"></span><span class="lbl">Deploy</span></button></li>
+    </ol>
+  </div>
+
+  <section id="ledger">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>Chain of custody</h2>
+        <p>Every gate records who attested to it and how long it took.</p>
+      </div>
+
+      <ol class="ledger">
+        <li id="gate-1">
+          <div class="num">1</div>
+          <div>
+            <h3 class="gate-name">Source integrity</h3>
+            <p class="gate-what">Branch protection enforced, all commits signed, no force-push since the last tag.</p>
+          </div>
+          <div class="signer mono">github-oidc</div>
+          <div class="elapsed">12s</div>
+          <div class="result" data-state="pass">Cleared</div>
+        </li>
+        <li id="gate-2">
+          <div class="num">2</div>
+          <div>
+            <h3 class="gate-name">Dependencies</h3>
+            <p class="gate-what">SBOM generated in CycloneDX 1.6 and diffed against the last release. One transitive package moved to a version with a known advisory.</p>
+          </div>
+          <div class="signer mono">syft@1.19.0</div>
+          <div class="elapsed">41s</div>
+          <div class="result" data-state="warn">Cleared with 1 warning</div>
+        </li>
+        <li id="gate-3">
+          <div class="num">3</div>
+          <div>
+            <h3 class="gate-name">Static analysis</h3>
+            <p class="gate-what">Semgrep and CodeQL over the diff. No new high-severity rules triggered; 3 pre-existing findings carried forward under an approved exception.</p>
+          </div>
+          <div class="signer mono">appsec-bot</div>
+          <div class="elapsed">3m 12s</div>
+          <div class="result" data-state="pass">Cleared</div>
+        </li>
+        <li id="gate-4">
+          <div class="num">4</div>
+          <div>
+            <h3 class="gate-name">Artifact signing</h3>
+            <p class="gate-what">Keyless signature issued, but SLSA v1.0 provenance is missing for the base layer. The build cannot be traced to a trusted builder end to end.</p>
+          </div>
+          <div class="signer mono">cosign / fulcio</div>
+          <div class="elapsed">8s</div>
+          <div class="result" data-state="fail">Rejected</div>
+        </li>
+        <li id="gate-5">
+          <div class="num">5</div>
+          <div>
+            <h3 class="gate-name">Image scan</h3>
+            <p class="gate-what">Runs against the production severity budget once a signed, fully attested image exists.</p>
+          </div>
+          <div class="signer">Waiting on gate 4</div>
+          <div class="elapsed">—</div>
+          <div class="result" data-state="idle">Not run</div>
+        </li>
+        <li id="gate-6">
+          <div class="num">6</div>
+          <div>
+            <h3 class="gate-name">Admission control</h3>
+            <p class="gate-what">The cluster verifies the signature and provenance again at deploy time. An unsigned image is refused by the API server, not by this pipeline.</p>
+          </div>
+          <div class="signer">Waiting on gate 5</div>
+          <div class="elapsed">—</div>
+          <div class="result" data-state="idle">Not run</div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="findings">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>What is blocking</h2>
+        <p>One finding fails the build. Two are advisory.</p>
+      </div>
+
+      <ul class="findings">
+        <li data-sev="critical">
+          <div class="sev">Critical — fails the build</div>
+          <h3>The base layer has no provenance attestation</h3>
+          <p>The image is built on a public base pulled straight from Docker Hub, so there is no record of which builder produced it. Policy <span class="mono">require-slsa-provenance</span> rejects any layer it cannot trace.</p>
+          <div class="where mono">docker.io/library/node:20-alpine → Dockerfile:1</div>
+          <div class="fix"><b>Fix:</b> rebuild against the mirrored base at <span class="mono">ghcr.io/northwind/base/node:20-alpine</span>, which ships attestations, then re-run gate 4.</div>
+        </li>
+        <li data-sev="high">
+          <div class="sev">High — advisory</div>
+          <h3>Known advisory in a build-time dependency</h3>
+          <p>Reachable only from the build container, not from the running service, so it does not fail the gate. It will fail once the package reaches a runtime layer.</p>
+          <div class="where mono">vite 5.4.11 → fixed in 5.4.15 · CVE-2025-30208</div>
+          <div class="fix"><b>Fix:</b> bump in <span class="mono">package.json</span> with the next dependency sweep.</div>
+        </li>
+        <li data-sev="medium">
+          <div class="sev">Medium — advisory</div>
+          <h3>A test fixture looks like a live payment key</h3>
+          <p>Pattern-matched as a Stripe secret. The value is a sandbox key, but it sits in a file that ships with the repository.</p>
+          <div class="where mono">services/checkout/tests/fixtures/stripe.json:14</div>
+          <div class="fix"><b>Fix:</b> move the key to the test secret store and rotate it.</div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="policy">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>The rule that denied it</h2>
+        <p>Policy is versioned with the service.</p>
+      </div>
+
+      <p class="policy-note">Gate 4 evaluates every layer against this rule. It denies anything without a provenance statement from a builder on the trusted list — there is no severity threshold to tune, because an untraceable layer is either present or it is not.</p>
+
+      <pre class="mono"><span class="c"># policy/supply-chain/provenance.rego</span>
+<span class="k">package</span> northwind.gates.signing
+
+<span class="k">deny</span> contains msg <span class="k">if</span> {
+    layer := input.image.layers[_]
+    <span class="k">not</span> layer.attestations.slsa_provenance
+    msg := sprintf("layer %v has no SLSA provenance", [layer.digest])
+}
+
+<span class="k">deny</span> contains msg <span class="k">if</span> {
+    builder := input.image.attestations.slsa_provenance.builder.id
+    <span class="k">not</span> trusted_builders[builder]
+    msg := sprintf("builder %v is not on the trusted list", [builder])
+}</pre>
+      <p class="srcline">Evaluated by conftest 0.56 against the image manifest. Waiving this rule needs two approvals from the platform security group.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Custodian — release gate ledger. Sample data, for design review.</div>
+    <div>Next evaluation runs on the following push to <span class="mono">release/2.14</span>.</div>
+  </div>
+</footer>
+
+<script>
+  // Chain nodes jump to their ledger row and cue it briefly.
+  document.querySelectorAll('.node').forEach(function (node) {
+    node.addEventListener('click', function () {
+      var row = document.getElementById('gate-' + node.dataset.gate);
+      if (!row) return;
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.querySelectorAll('.ledger li').forEach(function (li) { li.classList.remove('is-cued'); });
+      row.classList.add('is-cued');
+      window.setTimeout(function () { row.classList.remove('is-cued'); }, 2200);
+    });
+  });
+
+  document.querySelectorAll('[data-goto]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = document.getElementById(btn.dataset.goto);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>
