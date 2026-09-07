@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Custodian — release gate ledger</title>
-<meta name="description" content="Chain of custody for a release candidate: six pipeline gates, who signed each one, and what is blocking the deploy.">
+<title>DevSecOps — an introduction</title>
+<meta name="description" content="A lecture introduction to DevSecOps: what it is, why security moved into the pipeline, and the eight stages of the lifecycle with the security practice that belongs at each one.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -43,7 +43,8 @@
   }
 
   *,*::before,*::after{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
   body{
     margin:0;
     background:var(--paper);
@@ -70,19 +71,20 @@
   .buildref{font-size:13px;color:var(--slate);display:flex;gap:18px;flex-wrap:wrap}
   .buildref b{font-weight:500;color:var(--ink)}
 
-  /* ---------- verdict ---------- */
-  .verdict{padding:56px 0 8px}
-  .verdict .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:40px;align-items:start}
-  .verdict h1{
+  /* ---------- opening ---------- */
+  .opening{padding:56px 0 8px}
+  .opening .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:40px;align-items:start}
+  .opening h1{
     margin:0;font-size:clamp(40px,7.2vw,76px);line-height:.94;
-    font-weight:700;letter-spacing:-.035em;max-width:12ch;
+    font-weight:700;letter-spacing:-.035em;max-width:13ch;
   }
-  .verdict h1 em{font-style:normal;display:block;color:var(--seal)}
-  .subject{margin:22px 0 0;max-width:62ch;color:var(--slate);font-size:17px}
-  .artifact{margin:26px 0 0;border-top:1px solid var(--rule);padding-top:14px;max-width:60ch}
-  .artifact dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 22px;font-size:13.5px}
-  .artifact dt{color:var(--slate)}
-  .artifact dd{margin:0;overflow-wrap:anywhere}
+  .opening h1 em{font-style:normal;display:block;color:var(--seal)}
+  .lede{margin:22px 0 0;max-width:62ch;color:var(--slate);font-size:17px}
+  .lede + .lede{margin-top:14px}
+  .facts{margin:26px 0 0;border-top:1px solid var(--rule);padding-top:14px;max-width:60ch}
+  .facts dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 22px;font-size:13.5px}
+  .facts dt{color:var(--slate)}
+  .facts dd{margin:0;overflow-wrap:anywhere}
 
   .actions{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap}
   .btn{
@@ -93,34 +95,34 @@
   .btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
   .btn:hover{opacity:.86}
 
-  /* ---------- stamp (the one bold moment) ---------- */
-  .stamp{
+  /* ---------- seal (the one bold moment) ---------- */
+  .seal{
     width:190px;height:190px;flex:none;position:relative;
     display:grid;place-content:center;text-align:center;
     color:var(--seal);border:3px solid var(--seal);border-radius:50%;
     transform:rotate(-8deg);
   }
-  .stamp::after{
+  .seal::after{
     content:"";position:absolute;inset:9px;border:1.5px solid var(--seal);border-radius:50%;opacity:.7;
   }
-  .stamp .word{font-size:34px;font-weight:700;letter-spacing:.02em;line-height:1}
-  .stamp .sub{font-size:12.5px;margin-top:7px;letter-spacing:.06em;color:var(--seal);opacity:.9}
-  .stamp .date{font-size:11px;margin-top:12px;opacity:.75}
+  .seal .word{font-size:30px;font-weight:700;letter-spacing:.02em;line-height:1}
+  .seal .sub{font-size:12.5px;margin-top:7px;letter-spacing:.06em;opacity:.9;max-width:15ch}
+  .seal .date{font-size:11px;margin-top:12px;opacity:.75}
   @media (prefers-reduced-motion:no-preference){
-    .stamp{animation:land .58s cubic-bezier(.2,1.4,.4,1) both}
+    .seal{animation:land .58s cubic-bezier(.2,1.4,.4,1) both}
   }
   @keyframes land{
     from{opacity:0;transform:rotate(-22deg) scale(1.9)}
     to{opacity:1;transform:rotate(-8deg) scale(1)}
   }
 
-  /* ---------- chain ---------- */
-  .chain{margin:52px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(6,1fr)}
-  .chain li{position:relative;text-align:center}
-  .chain li::before{
+  /* ---------- the loop ---------- */
+  .loop{margin:52px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(8,1fr)}
+  .loop li{position:relative;text-align:center}
+  .loop li::before{
     content:"";position:absolute;top:8px;right:50%;width:100%;height:2px;background:var(--rule);
   }
-  .chain li:first-child::before{display:none}
+  .loop li:first-child::before{display:none}
   .node{
     -webkit-appearance:none;appearance:none;background:none;border:0;font:inherit;
     padding:0 4px 6px;cursor:pointer;width:100%;color:var(--slate);
@@ -130,11 +132,19 @@
     background:var(--paper);border:2px solid var(--idle);position:relative;z-index:1;
   }
   .node .lbl{font-size:12.5px;font-weight:500;display:block}
-  .node[data-state="pass"] .dot{background:var(--pass);border-color:var(--pass)}
-  .node[data-state="warn"] .dot{background:var(--warn);border-color:var(--warn)}
-  .node[data-state="fail"] .dot{background:var(--seal);border-color:var(--seal);box-shadow:0 0 0 5px var(--seal-soft)}
-  .node[data-state="fail"] .lbl{color:var(--seal);font-weight:600}
+  .node[data-phase="dev"] .dot{background:var(--pass);border-color:var(--pass)}
+  .node[data-phase="ci"] .dot{background:var(--seal);border-color:var(--seal)}
+  .node[data-phase="ops"] .dot{background:var(--warn);border-color:var(--warn)}
   .node:hover .lbl{color:var(--ink)}
+  .legend{
+    display:flex;gap:20px;flex-wrap:wrap;justify-content:center;
+    margin:16px 0 0;font-size:12.5px;color:var(--slate);
+  }
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .legend .k-dev{background:var(--pass)}
+  .legend .k-ci{background:var(--seal)}
+  .legend .k-ops{background:var(--warn)}
 
   /* ---------- sections ---------- */
   section{padding:64px 0}
@@ -143,40 +153,46 @@
   .sec-head h2{margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em}
   .sec-head p{margin:0;color:var(--slate);font-size:13.5px}
 
-  /* ---------- ledger ---------- */
-  .ledger{list-style:none;margin:0;padding:0}
-  .ledger li{
-    display:grid;grid-template-columns:34px minmax(0,1fr) 190px 74px 104px;
-    gap:18px;align-items:start;padding:18px 8px;border-bottom:1px solid var(--rule-soft);
+  /* ---------- shift-left contrast ---------- */
+  .contrast{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin-top:34px}
+  .contrast > div{padding:22px 26px 24px;border-top:3px solid var(--rule)}
+  .contrast > div:first-child{border-top-color:var(--idle)}
+  .contrast > div:last-child{border-top-color:var(--pass);background:var(--raised)}
+  .contrast h3{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+  .contrast .when{font-size:12.5px;color:var(--slate);margin:0 0 6px}
+  .contrast p{margin:10px 0 0;color:var(--slate);font-size:14.5px;max-width:44ch}
+  .cost{margin:16px 0 0;font-size:13px;color:var(--slate)}
+  .cost b{color:var(--ink);font-weight:600}
+
+  /* ---------- stage ledger ---------- */
+  .stages{list-style:none;margin:0;padding:0}
+  .stages li{
+    display:grid;grid-template-columns:34px minmax(0,1fr) 210px;
+    gap:18px;align-items:start;padding:20px 8px;border-bottom:1px solid var(--rule-soft);
     transition:background .25s ease;
   }
-  .ledger li.is-cued{background:var(--raised)}
-  .num{color:var(--slate);font-size:13px;padding-top:2px}
-  .gate-name{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
-  .gate-what{margin:4px 0 0;color:var(--slate);font-size:13.5px;max-width:52ch}
-  .signer,.elapsed{font-size:13px;color:var(--slate);padding-top:3px;overflow-wrap:anywhere}
-  .result{font-size:13.5px;font-weight:600;padding-top:2px}
-  .result[data-state="pass"]{color:var(--pass)}
-  .result[data-state="warn"]{color:var(--warn)}
-  .result[data-state="fail"]{color:var(--seal)}
-  .result[data-state="idle"]{color:var(--idle);font-weight:500}
+  .stages li.is-cued{background:var(--raised)}
+  .num{color:var(--slate);font-size:13px;padding-top:3px}
+  .stage-name{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+  .stage-name .tag{
+    font-size:11.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--slate);margin-left:10px;vertical-align:1px;
+  }
+  .stage-what{margin:5px 0 0;color:var(--slate);font-size:14px;max-width:56ch}
+  .stage-ask{margin:9px 0 0;font-size:14px;max-width:56ch}
+  .stage-ask b{font-weight:600}
+  .tools{font-size:13px;color:var(--slate);padding-top:4px;overflow-wrap:anywhere;line-height:1.75}
+  .tools .th{display:block;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
 
-  /* ---------- findings ---------- */
-  .findings{list-style:none;margin:0;padding:0}
-  .findings li{border-left:3px solid var(--rule);padding:20px 0 20px 20px;margin-top:26px}
-  .findings li[data-sev="critical"]{border-left-color:var(--seal)}
-  .findings li[data-sev="high"]{border-left-color:var(--warn)}
-  .sev{font-size:12.5px;font-weight:600;color:var(--slate)}
-  .findings li[data-sev="critical"] .sev{color:var(--seal)}
-  .findings li[data-sev="high"] .sev{color:var(--warn)}
-  .findings h3{margin:5px 0 0;font-size:18px;font-weight:600;letter-spacing:-.015em;max-width:46ch}
-  .findings p{margin:8px 0 0;color:var(--slate);font-size:14.5px;max-width:64ch}
-  .where{margin-top:10px;font-size:13px;color:var(--slate);overflow-wrap:anywhere}
-  .fix{margin-top:8px;font-size:14px}
-  .fix b{font-weight:600}
+  /* ---------- principles ---------- */
+  .principles{list-style:none;margin:0;padding:0}
+  .principles li{border-left:3px solid var(--rule);padding:18px 0 18px 20px;margin-top:26px}
+  .principles li:first-child{border-left-color:var(--seal)}
+  .principles h3{margin:0;font-size:18px;font-weight:600;letter-spacing:-.015em;max-width:48ch}
+  .principles p{margin:8px 0 0;color:var(--slate);font-size:14.5px;max-width:64ch}
 
-  /* ---------- policy ---------- */
-  .policy-note{color:var(--slate);font-size:14.5px;max-width:64ch;margin:24px 0 18px}
+  /* ---------- gate example ---------- */
+  .note{color:var(--slate);font-size:14.5px;max-width:64ch;margin:24px 0 18px}
   pre{
     margin:0;background:var(--raised);border:1px solid var(--rule-soft);border-left:3px solid var(--seal);
     padding:20px 22px;overflow-x:auto;font-size:13.5px;line-height:1.65;
@@ -191,19 +207,21 @@
 
   /* ---------- narrow ---------- */
   @media (max-width:860px){
-    .verdict .wrap{grid-template-columns:1fr;gap:34px}
-    .stamp{width:158px;height:158px;justify-self:start}
-    .stamp .word{font-size:29px}
-    .ledger li{grid-template-columns:28px minmax(0,1fr) auto;gap:12px}
-    .signer,.elapsed{grid-column:2;padding-top:0;margin-top:6px}
-    .elapsed{grid-column:3;text-align:right}
-    .result{grid-column:3;text-align:right}
+    .opening .wrap{grid-template-columns:1fr;gap:34px}
+    .seal{width:158px;height:158px;justify-self:start}
+    .seal .word{font-size:25px}
+    .loop{grid-template-columns:repeat(4,1fr);row-gap:22px}
+    .loop li:nth-child(5)::before{display:none}
+    .contrast{grid-template-columns:1fr}
+    .stages li{grid-template-columns:28px minmax(0,1fr);gap:12px}
+    .tools{grid-column:2;padding-top:0;margin-top:12px}
   }
   @media (max-width:560px){
     .wrap{padding:0 20px}
     section{padding:48px 0}
     .node .lbl{font-size:11px}
-    .chain{gap:0}
+    .loop{grid-template-columns:repeat(2,1fr)}
+    .loop li:nth-child(odd)::before{display:none}
   }
 </style>
 </head>
@@ -211,171 +229,184 @@
 
 <header class="masthead">
   <div class="wrap">
-    <div class="mark">Custodian <span>/ checkout-api</span></div>
+    <div class="mark">DevSecOps <span>/ introduction</span></div>
     <div class="buildref">
-      <span>build <b>4821</b></span>
-      <span>branch <b class="mono">release/2.14</b></span>
-      <span>evaluated <b>09:41 UTC</b></span>
+      <span>lecture <b>01</b></span>
+      <span>topic <b>the secure delivery lifecycle</b></span>
+      <span>duration <b>50 min</b></span>
     </div>
   </div>
 </header>
 
 <main>
-  <div class="verdict">
+  <div class="opening">
     <div class="wrap">
       <div>
-        <h1>Release candidate <em>held at gate 4</em></h1>
-        <p class="subject">Four of six gates cleared. Artifact signing rejected the build: the base layer carries no provenance attestation, so nothing downstream will run until it is replaced or the policy is waived.</p>
+        <h1>Security is a stage <em>not a signature</em></h1>
+        <p class="lede">For most of software history, security happened at the end. A team built for six months, handed the result to a review board, and waited. The board found problems late, when they were expensive, and the only lever it had was to say no.</p>
+        <p class="lede">DevSecOps moves that work into the pipeline. Every stage of delivery carries its own security practice, running automatically, giving an answer in minutes instead of weeks. The review board becomes a policy the build must satisfy — and anyone can see, at any moment, exactly which check would stop a release.</p>
 
-        <div class="artifact">
+        <div class="facts">
           <dl>
-            <dt>Image</dt><dd class="mono">ghcr.io/northwind/checkout-api:2.14.0-rc3</dd>
-            <dt>Digest</dt><dd class="mono">sha256:9f2c4b7e0d51a83c6ee2f04b7d19c8aa5b3e77f10c92d4416b8ac03e5721a41d</dd>
-            <dt>Commit</dt><dd class="mono">8e31c0d</dd>
+            <dt>In one line</dt><dd>Everyone owns security, and the pipeline enforces it.</dd>
+            <dt>Shifts</dt><dd>From a gate at the end to a control at every stage</dd>
+            <dt>Measured by</dt><dd>Time to detect, time to remediate, change failure rate</dd>
           </dl>
         </div>
 
         <div class="actions">
-          <button class="btn" data-goto="findings">See what is blocking</button>
-          <button class="btn ghost" data-goto="policy">Read the policy</button>
+          <button class="btn" data-goto="stages">Walk the eight stages</button>
+          <button class="btn ghost" data-goto="why">Why it changed</button>
         </div>
       </div>
 
-      <div class="stamp" role="img" aria-label="Stamped: deploy denied, 2 of 6 gates unrun">
-        <div class="word">DENIED</div>
-        <div class="sub">gate 4 of 6</div>
-        <div class="date mono">2026-09-07</div>
+      <div class="seal" role="img" aria-label="Shift left: eight stages, one loop">
+        <div class="word">SHIFT<br>LEFT</div>
+        <div class="sub">8 stages · 1 loop</div>
+        <div class="date mono">lecture 01</div>
       </div>
     </div>
   </div>
 
   <div class="wrap">
-    <ol class="chain">
-      <li><button class="node" data-state="pass" data-gate="1"><span class="dot"></span><span class="lbl">Source</span></button></li>
-      <li><button class="node" data-state="warn" data-gate="2"><span class="dot"></span><span class="lbl">Deps</span></button></li>
-      <li><button class="node" data-state="pass" data-gate="3"><span class="dot"></span><span class="lbl">SAST</span></button></li>
-      <li><button class="node" data-state="fail" data-gate="4"><span class="dot"></span><span class="lbl">Sign</span></button></li>
-      <li><button class="node" data-state="idle" data-gate="5"><span class="dot"></span><span class="lbl">Scan</span></button></li>
-      <li><button class="node" data-state="idle" data-gate="6"><span class="dot"></span><span class="lbl">Deploy</span></button></li>
+    <ol class="loop" aria-label="The eight stages of the DevSecOps lifecycle">
+      <li><button class="node" data-phase="dev" data-stage="1"><span class="dot"></span><span class="lbl">Plan</span></button></li>
+      <li><button class="node" data-phase="dev" data-stage="2"><span class="dot"></span><span class="lbl">Code</span></button></li>
+      <li><button class="node" data-phase="ci" data-stage="3"><span class="dot"></span><span class="lbl">Build</span></button></li>
+      <li><button class="node" data-phase="ci" data-stage="4"><span class="dot"></span><span class="lbl">Test</span></button></li>
+      <li><button class="node" data-phase="ci" data-stage="5"><span class="dot"></span><span class="lbl">Release</span></button></li>
+      <li><button class="node" data-phase="ops" data-stage="6"><span class="dot"></span><span class="lbl">Deploy</span></button></li>
+      <li><button class="node" data-phase="ops" data-stage="7"><span class="dot"></span><span class="lbl">Operate</span></button></li>
+      <li><button class="node" data-phase="ops" data-stage="8"><span class="dot"></span><span class="lbl">Monitor</span></button></li>
     </ol>
+    <p class="legend">
+      <span><i class="k-dev"></i> Written by people</span>
+      <span><i class="k-ci"></i> Enforced by the pipeline</span>
+      <span><i class="k-ops"></i> Observed in production</span>
+    </p>
   </div>
 
-  <section id="ledger">
+  <section id="why">
     <div class="wrap">
       <div class="sec-head">
-        <h2>Chain of custody</h2>
-        <p>Every gate records who attested to it and how long it took.</p>
+        <h2>Why it changed</h2>
+        <p>The same flaw, found at two different moments.</p>
       </div>
 
-      <ol class="ledger">
-        <li id="gate-1">
+      <div class="contrast">
+        <div>
+          <p class="when">The old shape</p>
+          <h3>Found in the penetration test, three days before launch</h3>
+          <p>A hardcoded credential sits in the repository for four months. It surfaces in a report, and now a fix means a code change, a rebuild, a re-test, a rotated secret, and a launch date that moves.</p>
+          <p class="cost">Feedback arrives in <b>months</b>. The fix touches work that has been built on top of it many times over.</p>
+        </div>
+        <div>
+          <p class="when">The DevSecOps shape</p>
+          <h3>Found by a pre-commit hook, ninety seconds after it was typed</h3>
+          <p>A secret scanner refuses the commit. The developer still has the whole change in their head, deletes the line, and moves the value into the secret store. Nothing downstream ever sees it.</p>
+          <p class="cost">Feedback arrives in <b>seconds</b>. The fix touches one line, in one head, once.</p>
+        </div>
+      </div>
+
+      <p class="note">Nothing about the vulnerability differs between these two columns. What differs is when the pipeline asked the question — and that alone accounts for most of the cost. This is the whole argument for shifting left, and every stage below is an application of it.</p>
+    </div>
+  </section>
+
+  <section id="stages">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>The eight stages</h2>
+        <p>Each one asks a question, and has tooling that answers it.</p>
+      </div>
+
+      <ol class="stages">
+        <li id="stage-1">
           <div class="num">1</div>
           <div>
-            <h3 class="gate-name">Source integrity</h3>
-            <p class="gate-what">Branch protection enforced, all commits signed, no force-push since the last tag.</p>
+            <h3 class="stage-name">Plan <span class="tag">Written by people</span></h3>
+            <p class="stage-what">Before any code exists, decide what could go wrong. Threat modelling walks the design and asks how an attacker would approach each trust boundary, and security requirements are written into the story rather than bolted on later.</p>
+            <p class="stage-ask"><b>The question:</b> what are we building, and what would it look like to abuse it?</p>
           </div>
-          <div class="signer mono">github-oidc</div>
-          <div class="elapsed">12s</div>
-          <div class="result" data-state="pass">Cleared</div>
+          <div class="tools"><span class="th">Practices</span>Threat modelling (STRIDE) · abuse cases · data classification · security acceptance criteria</div>
         </li>
-        <li id="gate-2">
+        <li id="stage-2">
           <div class="num">2</div>
           <div>
-            <h3 class="gate-name">Dependencies</h3>
-            <p class="gate-what">SBOM generated in CycloneDX 1.6 and diffed against the last release. One transitive package moved to a version with a known advisory.</p>
+            <h3 class="stage-name">Code <span class="tag">Written by people</span></h3>
+            <p class="stage-what">The developer's own machine becomes the first control. Linters, secret scanners and IDE plugins run as the code is typed, so the cheapest possible feedback loop catches the cheapest possible class of mistakes.</p>
+            <p class="stage-ask"><b>The question:</b> does this change introduce a known-bad pattern or leak a credential?</p>
           </div>
-          <div class="signer mono">syft@1.19.0</div>
-          <div class="elapsed">41s</div>
-          <div class="result" data-state="warn">Cleared with 1 warning</div>
+          <div class="tools"><span class="th">Tooling</span>pre-commit hooks · gitleaks · trufflehog · IDE security plugins · signed commits</div>
         </li>
-        <li id="gate-3">
+        <li id="stage-3">
           <div class="num">3</div>
           <div>
-            <h3 class="gate-name">Static analysis</h3>
-            <p class="gate-what">Semgrep and CodeQL over the diff. No new high-severity rules triggered; 3 pre-existing findings carried forward under an approved exception.</p>
+            <h3 class="stage-name">Build <span class="tag">Enforced by the pipeline</span></h3>
+            <p class="stage-what">CI compiles the artifact and, just as importantly, records what went into it. A software bill of materials lists every dependency, and dependency scanning checks that list against known advisories.</p>
+            <p class="stage-ask"><b>The question:</b> what exactly is in this artifact, and is any of it known to be vulnerable?</p>
           </div>
-          <div class="signer mono">appsec-bot</div>
-          <div class="elapsed">3m 12s</div>
-          <div class="result" data-state="pass">Cleared</div>
+          <div class="tools"><span class="th">Tooling</span>SCA · SBOM (CycloneDX, SPDX) · syft · Dependabot · reproducible builds</div>
         </li>
-        <li id="gate-4">
+        <li id="stage-4">
           <div class="num">4</div>
           <div>
-            <h3 class="gate-name">Artifact signing</h3>
-            <p class="gate-what">Keyless signature issued, but SLSA v1.0 provenance is missing for the base layer. The build cannot be traced to a trusted builder end to end.</p>
+            <h3 class="stage-name">Test <span class="tag">Enforced by the pipeline</span></h3>
+            <p class="stage-what">Static analysis reads the source for injection, unsafe deserialisation and weak crypto. Dynamic analysis runs the deployed application and attacks it. The two find different things, which is why mature pipelines run both.</p>
+            <p class="stage-ask"><b>The question:</b> does the code contain a flaw, and can it be exploited when running?</p>
           </div>
-          <div class="signer mono">cosign / fulcio</div>
-          <div class="elapsed">8s</div>
-          <div class="result" data-state="fail">Rejected</div>
+          <div class="tools"><span class="th">Tooling</span>SAST (Semgrep, CodeQL) · DAST (ZAP) · IAST · fuzzing · security unit tests</div>
         </li>
-        <li id="gate-5">
+        <li id="stage-5">
           <div class="num">5</div>
           <div>
-            <h3 class="gate-name">Image scan</h3>
-            <p class="gate-what">Runs against the production severity budget once a signed, fully attested image exists.</p>
+            <h3 class="stage-name">Release <span class="tag">Enforced by the pipeline</span></h3>
+            <p class="stage-what">The artifact is signed and its provenance recorded, so the thing that reaches production can be proven to be the thing that was built and tested. This is the supply-chain link — it is what stops a compromised build server from shipping something no one reviewed.</p>
+            <p class="stage-ask"><b>The question:</b> can we prove this artifact came from our pipeline, unmodified?</p>
           </div>
-          <div class="signer">Waiting on gate 4</div>
-          <div class="elapsed">—</div>
-          <div class="result" data-state="idle">Not run</div>
+          <div class="tools"><span class="th">Tooling</span>cosign / sigstore · SLSA provenance · in-toto attestations · immutable registries</div>
         </li>
-        <li id="gate-6">
+        <li id="stage-6">
           <div class="num">6</div>
           <div>
-            <h3 class="gate-name">Admission control</h3>
-            <p class="gate-what">The cluster verifies the signature and provenance again at deploy time. An unsigned image is refused by the API server, not by this pipeline.</p>
+            <h3 class="stage-name">Deploy <span class="tag">Observed in production</span></h3>
+            <p class="stage-what">Infrastructure is code, so it is reviewed and scanned like code. At deploy time the cluster verifies the signature again — trusting the pipeline is not the same as verifying at the door — and secrets are injected rather than baked into the image.</p>
+            <p class="stage-ask"><b>The question:</b> is the environment configured safely, and is this image allowed to run here?</p>
           </div>
-          <div class="signer">Waiting on gate 5</div>
-          <div class="elapsed">—</div>
-          <div class="result" data-state="idle">Not run</div>
+          <div class="tools"><span class="th">Tooling</span>IaC scanning (tfsec, Checkov) · admission control (OPA, Kyverno) · Vault · least-privilege IAM</div>
+        </li>
+        <li id="stage-7">
+          <div class="num">7</div>
+          <div>
+            <h3 class="stage-name">Operate <span class="tag">Observed in production</span></h3>
+            <p class="stage-what">Production drifts. Configuration changes by hand, new CVEs are published against images that were clean last week, and permissions accumulate. Operating securely means continuously re-checking what was true at deploy time.</p>
+            <p class="stage-ask"><b>The question:</b> is what is running still what we approved?</p>
+          </div>
+          <div class="tools"><span class="th">Tooling</span>runtime scanning · patch automation · configuration drift detection · access reviews</div>
+        </li>
+        <li id="stage-8">
+          <div class="num">8</div>
+          <div>
+            <h3 class="stage-name">Monitor <span class="tag">Observed in production</span></h3>
+            <p class="stage-what">Detection closes the loop. Logs, metrics and runtime alerts feed incident response, and every incident becomes an input to the next planning cycle — a new threat model entry, a new test, a new gate.</p>
+            <p class="stage-ask"><b>The question:</b> would we notice an attack, and how fast?</p>
+          </div>
+          <div class="tools"><span class="th">Tooling</span>SIEM · runtime detection (Falco) · audit logging · incident response runbooks</div>
         </li>
       </ol>
     </div>
   </section>
 
-  <section id="findings">
+  <section id="gate">
     <div class="wrap">
       <div class="sec-head">
-        <h2>What is blocking</h2>
-        <p>One finding fails the build. Two are advisory.</p>
+        <h2>What a gate actually looks like</h2>
+        <p>Policy as code, versioned with the service.</p>
       </div>
 
-      <ul class="findings">
-        <li data-sev="critical">
-          <div class="sev">Critical — fails the build</div>
-          <h3>The base layer has no provenance attestation</h3>
-          <p>The image is built on a public base pulled straight from Docker Hub, so there is no record of which builder produced it. Policy <span class="mono">require-slsa-provenance</span> rejects any layer it cannot trace.</p>
-          <div class="where mono">docker.io/library/node:20-alpine → Dockerfile:1</div>
-          <div class="fix"><b>Fix:</b> rebuild against the mirrored base at <span class="mono">ghcr.io/northwind/base/node:20-alpine</span>, which ships attestations, then re-run gate 4.</div>
-        </li>
-        <li data-sev="high">
-          <div class="sev">High — advisory</div>
-          <h3>Known advisory in a build-time dependency</h3>
-          <p>Reachable only from the build container, not from the running service, so it does not fail the gate. It will fail once the package reaches a runtime layer.</p>
-          <div class="where mono">vite 5.4.11 → fixed in 5.4.15 · CVE-2025-30208</div>
-          <div class="fix"><b>Fix:</b> bump in <span class="mono">package.json</span> with the next dependency sweep.</div>
-        </li>
-        <li data-sev="medium">
-          <div class="sev">Medium — advisory</div>
-          <h3>A test fixture looks like a live payment key</h3>
-          <p>Pattern-matched as a Stripe secret. The value is a sandbox key, but it sits in a file that ships with the repository.</p>
-          <div class="where mono">services/checkout/tests/fixtures/stripe.json:14</div>
-          <div class="fix"><b>Fix:</b> move the key to the test secret store and rotate it.</div>
-        </li>
-      </ul>
-    </div>
-  </section>
-
-  <section id="policy">
-    <div class="wrap">
-      <div class="sec-head">
-        <h2>The rule that denied it</h2>
-        <p>Policy is versioned with the service.</p>
-      </div>
-
-      <p class="policy-note">Gate 4 evaluates every layer against this rule. It denies anything without a provenance statement from a builder on the trusted list — there is no severity threshold to tune, because an untraceable layer is either present or it is not.</p>
+      <p class="note">A "security gate" sounds abstract until you see one. Here is the rule from stage 5, written in Rego and evaluated against an image manifest. It denies any layer that cannot be traced to a trusted builder. Note what it is not: there is no severity score to negotiate over, and no meeting. The layer is either traceable or it is not, and the answer arrives in seconds.</p>
 
       <pre class="mono"><span class="c"># policy/supply-chain/provenance.rego</span>
-<span class="k">package</span> northwind.gates.signing
+<span class="k">package</span> pipeline.gates.release
 
 <span class="k">deny</span> contains msg <span class="k">if</span> {
     layer := input.image.layers[_]
@@ -388,26 +419,54 @@
     <span class="k">not</span> trusted_builders[builder]
     msg := sprintf("builder %v is not on the trusted list", [builder])
 }</pre>
-      <p class="srcline">Evaluated by conftest 0.56 against the image manifest. Waiving this rule needs two approvals from the platform security group.</p>
+      <p class="srcline">Because the policy lives in the repository, changing what "secure enough" means is a pull request — reviewable, attributable, and reversible.</p>
+    </div>
+  </section>
+
+  <section id="principles">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>Four things to carry out of this lecture</h2>
+        <p>The tooling changes every few years. These do not.</p>
+      </div>
+
+      <ul class="principles">
+        <li>
+          <h3>The cost of a flaw is set by when you find it</h3>
+          <p>Not by its severity, and not by how clever the fix is. Every practice in this lecture exists to move detection earlier, because that single variable dominates everything else.</p>
+        </li>
+        <li>
+          <h3>If a control is not automated, it will be skipped</h3>
+          <p>Under deadline pressure, a manual checklist is the first thing to go. A control that runs in the pipeline runs on the worst day of the release too, which is precisely when it matters.</p>
+        </li>
+        <li>
+          <h3>Security owns the guardrails, not the gate</h3>
+          <p>The security team's job shifts from reviewing every change to building the checks that review every change. Developers keep ownership of their code; they just get told faster when something is wrong.</p>
+        </li>
+        <li>
+          <h3>A gate nobody trusts gets disabled</h3>
+          <p>False positives are not a cosmetic problem — they are how a pipeline loses its authority. A noisy scanner that blocks builds for nothing will be bypassed within a month, and then it protects nothing at all.</p>
+        </li>
+      </ul>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <div>Custodian — release gate ledger. Sample data, for design review.</div>
-    <div>Next evaluation runs on the following push to <span class="mono">release/2.14</span>.</div>
+    <div>DevSecOps — lecture 01: introduction and the eight stages.</div>
+    <div>Next: building a gate of your own, from policy to pipeline.</div>
   </div>
 </footer>
 
 <script>
-  // Chain nodes jump to their ledger row and cue it briefly.
+  // Loop nodes jump to their stage row and cue it briefly.
   document.querySelectorAll('.node').forEach(function (node) {
     node.addEventListener('click', function () {
-      var row = document.getElementById('gate-' + node.dataset.gate);
+      var row = document.getElementById('stage-' + node.dataset.stage);
       if (!row) return;
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      document.querySelectorAll('.ledger li').forEach(function (li) { li.classList.remove('is-cued'); });
+      document.querySelectorAll('.stages li').forEach(function (li) { li.classList.remove('is-cued'); });
       row.classList.add('is-cued');
       window.setTimeout(function () { row.classList.remove('is-cued'); }, 2200);
     });
